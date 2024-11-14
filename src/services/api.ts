@@ -3,7 +3,11 @@ import { config } from '../config';
 
 const api = axios.create({
   baseURL: config.apiBaseUrl,
-  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  // Removemos withCredentials ya que no estamos usando cookies
+  withCredentials: false
 });
 
 api.interceptors.request.use((config) => {
@@ -17,11 +21,12 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    console.error('API Error:', error.response || error);
     if (error.response?.status === 401) {
       localStorage.removeItem('chatUser');
       window.location.href = '/';
     }
-    return Promise.reject(error);
+    throw new Error(error.response?.data?.error || 'Error al enviar mensaje');
   }
 );
 
@@ -32,9 +37,12 @@ export const chatApi = {
         question,
         history,
       });
-      return response.data;
+      return {
+        reply: response.data.response || response.data.reply
+      };
     } catch (error: any) {
-      throw new Error(error.response?.data?.error || 'Error al enviar mensaje');
+      console.error('Send Message Error:', error);
+      throw new Error(error.message || 'Error al enviar mensaje');
     }
   },
 
